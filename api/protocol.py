@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+
 from packets import request_control_message
 from packets import request_info_message
 from packets import request_head_position
@@ -9,6 +14,8 @@ from regex_patterns import regex_for_field
 from regex_patterns import regex_for_coordinates
 from regex_patterns import regex_for_current_temperature
 from regex_patterns import regex_for_target_temperature
+from regex_patterns import regex_for_current_base_temperature
+from regex_patterns import regex_for_target_base_temperature
 from regex_patterns import regex_for_progress
 from socket_handler import send_and_receive
 
@@ -23,7 +30,8 @@ def get_info(printer_address):
     info_result = send_and_receive(printer_address, request_info_message)
 
     printer_info = {}
-    info_fields = ['Type', 'Name', 'Firmware', 'SN', 'X', 'Tool Count']
+    #info_fields = ['Type', 'Name', 'Firmware', 'SN', 'X', 'Tool Count']
+    info_fields = ['Machine Type', 'Machine Name', 'Firmware', 'SN', 'X', 'Tool Count', 'Mac Address']
     for field in info_fields:
         regex_string = regex_for_field(field)
         printer_info[field] = re.search(regex_string, info_result).groups()[0]
@@ -52,12 +60,19 @@ def get_temp(printer_address):
     send_and_receive(printer_address, request_control_message)
     info_result = send_and_receive(printer_address, request_temp)
 
+    print(info_result)
+
     regex_temp = regex_for_current_temperature()
     regex_target_temp = regex_for_target_temperature()
     temp = re.search(regex_temp, info_result).groups()[0]
     target_temp = re.search(regex_target_temp, info_result).groups()[0]
 
-    return {'Temperature': temp, 'TargetTemperature': target_temp}
+    regex_base_temp = regex_for_current_base_temperature()
+    regex_target_base_temp = regex_for_target_base_temperature()
+    base_temp = re.search(regex_base_temp, info_result).groups()[0]
+    target_base_temp = re.search(regex_target_base_temp, info_result).groups()[0]
+
+    return {'Temperature': temp, 'TargetTemperature': target_temp, 'BaseTemperature': base_temp, 'TargetBaseTemperature': target_base_temp, }
 
 
 def get_progress(printer_address):
@@ -65,13 +80,10 @@ def get_progress(printer_address):
     info_result = send_and_receive(printer_address, request_progress)
 
     regex_groups = re.search(regex_for_progress(), info_result).groups()
-    printed = int(regex_groups[0])
-    total = int(regex_groups[1])
+    printed = regex_groups[0]
+    total = regex_groups[1]
 
-    if total == 0:
-        percentage = 0
-    else:
-        percentage = int(float(printed) / total * 100)
+    percentage = 0 if total is '0' else int((int(printed) / int(total)) * 100)
 
     return {'BytesPrinted': printed,
             'BytesTotal': total,

@@ -3,9 +3,12 @@ import socket
 BUFFER_SIZE = 1024
 TIMEOUT_SECONDS = 5
 
+import time
 
 def send_and_receive(printer_adress, message_data):
     """Sends and receives data"""
+
+    time.sleep(0.5) # delay
 
     printer_socket = socket.socket()
     printer_socket.settimeout(TIMEOUT_SECONDS)
